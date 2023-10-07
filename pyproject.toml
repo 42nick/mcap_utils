@@ -1,0 +1,83 @@
+[tool.poetry]
+name = "mcap_utils"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+foxglove-schemas-protobuf = "^0.1.1"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.4.2"
+pytest-cov = "^4.1.0"
+coverage = "^7.3.2"
+black = "^23.9.1"
+isort = "^5.12.0"
+pylint = "^3.0.1"
+mypy = "^1.5.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tools.isort]
+skip = [".gitignore", ".dockerignore"]
+skip_glob = ["docs/*"]
+profile = "black"
+line_length = 120
+
+[tool.black]
+line_length = 120
+exclude = '''
+(
+  /(
+      \.eggs
+    | \.git
+    | \.pytest_cache
+    | \.mypy_cache
+    | \.venv
+    | \.tox
+    | venv
+    | dist
+  )/
+)
+'''
+
+[tool.pylint.messages_control]
+max-line-length = 120
+disable = """
+    missing-function-docstring,
+    missing-module-docstring
+    """
+# generated-members = """
+#     torch.*
+#     numpy.*
+#     """
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --cov=mcap_utils --cov-branch --cov-report html:reports/html --cov-report=term-missing"
+
+[tool.coverage.report]
+exclude_lines = [
+  "pragma: no cover",
+  "raise AssertionError",
+  "def __repr__",
+  "def __str__",
+  "if __name__ == .__main__.:",
+  "raise NotImplementedError",
+]
+
+[tool.coverage.run]
+branch = true
+data_file = "reports/.coverage"
+
+
+[tool.mypy]
+strict = true
+warn_return_any = false

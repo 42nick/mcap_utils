@@ -1,0 +1,10 @@
+{
+    // Installed extension can be listed with `code --list-extensions`.
+    "recommendations": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.isort",
+        "KevinRose.vsc-python-indent",
+        "njpwerner.autodocstring"
+    ]
+}                    

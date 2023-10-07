@@ -1,0 +1,22 @@
+{
+  "template": "https://github.com/42nick/cookie-py-template",
+  "commit": "e329802ddba6609860b997ab13c5f33cf2f2a09b",
+  "checkout": "feat/poetry",
+  "context": {
+    "cookiecutter": {
+      "full_name": "Niklas Hahn",
+      "email": "YourEmail@eg.com",
+      "github_username": "42nick",
+      "project_name": "mcap_utils",
+      "project_slug": "mcap_utils",
+      "project_short_description": "Contains helper function to simplify mcap creation with python",
+      "version": "0.0.0",
+      "Do you want to add a .vscode folder and useful python related settings e.g. autoformatting on save with black and isort?\n[Please press enter for the next input]": "",
+      "additional_vsc_settings": "y",
+      "Do you want to link your project to sonarcloud.io for code quality analysis? You need to provide the sonarcloud organization in the next step and set the SONAR_TOKEN environment variable.\n[Please press enter for the next input]": "",
+      "sonarcloud": "n",
+      "_template": "https://github.com/42nick/cookie-py-template"
+    }
+  },
+  "directory": null
+}
