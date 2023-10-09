@@ -26,5 +26,19 @@
             "console": "integratedTerminal",
             "justMyCode": true
         },
+        {
+            "name": "Nuscenes viualization",
+            "type": "python",
+            "request": "launch",
+            "program": "src/mcap_utils/nuscenes_visu/main.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--nuscenes_version",
+                "v1.0-mini",
+                "--nuscenes_data_root",
+                "/home/hahn/data/nuscenes",
+            ],
+            "justMyCode": true
+        },
     ]
-}               
+}

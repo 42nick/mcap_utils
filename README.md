@@ -9,4 +9,7 @@ As stated [here](https://stackoverflow.com/questions/62983756/what-is-pyproject-
 
 With [PEP 631](https://peps.python.org/pep-0631/) it becomes easily to add optional-dependencies and the need for the setup.cfg is not relevant anylonger. 
 
-
+# Additional installation steps
+```bash
+sudo apt-get install python3-tk
+```
