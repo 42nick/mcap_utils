@@ -23,6 +23,12 @@ def load_nuscenes(argv: list[str]):
         a = nusc.render_sample_data(cam_front_data["token"])
         print()
     cam_front_data = nusc.get("sample_data", my_sample["data"][NuscenesCameras.CAM_BACK_RIGHT])
+
+    # get camera data
+    camera_metadata = nusc.get("calibrated_sensor", cam_front_data["calibrated_sensor_token"])
+
+    cam_front_data["calibrated_sensor_token"]
+
     a = nusc.render_sample_data(cam_front_data["token"])
 
     my_annotation_token = my_sample["anns"][18]
