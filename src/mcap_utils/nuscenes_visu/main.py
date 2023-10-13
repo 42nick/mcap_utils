@@ -1,11 +1,14 @@
 from __future__ import annotations
+from io import BytesIO
 
 import sys
 
 import matplotlib
+from mcap_protobuf.writer import Writer
 from nuscenes.nuscenes import NuScenes
 
 from mcap_utils.nuscenes_visu.definitions import CLIParameter, NuscenesCameras
+from mcap_utils.nuscenes_visu.mcap_writer import McapWriter
 
 matplotlib.use("TkAgg")
 
@@ -15,32 +18,26 @@ def load_nuscenes(argv: list[str]):
 
     nusc = NuScenes(version=args.nuscenes_version, dataroot=args.nuscenes_data_root, verbose=True)
 
-    my_scene = nusc.scene[0]
-    my_sample = nusc.get("sample", my_scene["first_sample_token"])
+    with open("z.mcap", "wb") as f, Writer(f) as writer:
+        mcap_writer = McapWriter(writer=writer)
 
-    for cam in NuscenesCameras:
-        cam_front_data = nusc.get("sample_data", my_sample["data"][cam])
-        a = nusc.render_sample_data(cam_front_data["token"])
-        print()
-    cam_front_data = nusc.get("sample_data", my_sample["data"][NuscenesCameras.CAM_BACK_RIGHT])
+        my_scene = nusc.scene[0]
+        sample = None
 
-    # get camera data
-    camera_metadata = nusc.get("calibrated_sensor", cam_front_data["calibrated_sensor_token"])
+        while True:
+            if sample is None:
+                sample = nusc.get("sample", my_scene["first_sample_token"])
+            elif sample["next"] == "":
+                break
+            else:
+                sample = nusc.get("sample", sample["next"])
 
-    cam_front_data["calibrated_sensor_token"]
+            sample_data = nusc.get("sample_data", sample["data"][NuscenesCameras.CAM_FRONT])
 
-    a = nusc.render_sample_data(cam_front_data["token"])
+            # get ego pose
+            ego_pose = nusc.get("ego_pose", sample_data["ego_pose_token"])
 
-    my_annotation_token = my_sample["anns"][18]
-    my_annotation_metadata = nusc.get("sample_annotation", my_annotation_token)
-    my_annotation_metadata
-
-    nusc.render_annotation(my_annotation_token)
-
-    my_instance = nusc.instance[599]
-    my_instance
-    nusc.render_annotation(my_instance["first_annotation_token"])
-    nusc.render_annotation(my_instance["last_annotation_token"])
+            mcap_writer.add_nuscenes_ego_pose(nuscenes_egopose_data=ego_pose, flag_add_point_cloud=True)
 
     print()
 
