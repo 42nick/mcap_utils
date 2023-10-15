@@ -24,9 +24,10 @@ def get_protobuf_timestamp(timestamp_ns: int) -> Timestamp:
     return Timestamp(seconds=timestamp_ns // 1_000_000_000, nanos=timestamp_ns % 1_000_000_000)
 
 
-class McapWriter:
-    WORLD_FRAME_ID = "world"
+WORLD_FRAME_ID = "world"
 
+
+class McapWriter:
     def __init__(self, writer: Writer) -> None:
         self.writer = writer
 
@@ -47,7 +48,7 @@ class McapWriter:
             topic="/frame_transform",
             message=FrameTransform(
                 timestamp=get_protobuf_timestamp(timestamp),
-                frame_id=self.WORLD_FRAME_ID,
+                frame_id=WORLD_FRAME_ID,
                 parent_frame_id="",
                 translation=Vector3(x=0, y=0, z=0),
                 rotation=Quaternion(x=0, y=0, z=0, w=1),
@@ -55,32 +56,53 @@ class McapWriter:
             log_time=timestamp,
         )
 
+    def add_frame_transform(
+        self,
+        translation_rotation: dict[str, list[float]],
+        timestamp_micro_s: int,
+        topic_name: str,
+        child_frame_id: str = None,
+        parent_frame_id: str = WORLD_FRAME_ID,
+    ):
+        timestamp_ns = timestamp_micro_s * 1_000
+        self.writer.write_message(
+            topic=topic_name,
+            message=FrameTransform(
+                timestamp=get_protobuf_timestamp(timestamp_ns=timestamp_ns),
+                child_frame_id=child_frame_id,
+                parent_frame_id=parent_frame_id,
+                translation=Vector3(
+                    x=translation_rotation["translation"][0],
+                    y=translation_rotation["translation"][1],
+                    z=translation_rotation["translation"][2],
+                ),
+                rotation=Quaternion(
+                    x=translation_rotation["rotation"][0],
+                    y=translation_rotation["rotation"][1],
+                    z=translation_rotation["rotation"][2],
+                    w=translation_rotation["rotation"][3],
+                ),
+            ),
+            log_time=timestamp_ns,
+        )
+
+    def add_nuscenes_camera_pose(
+        self, nuscenes_camera_data: dict[str, Union[str, list[float]]], timestamp_micro_s: int, camera_topic_name: str
+    ):
+        # timestamp_ns = timestamp_micro_s * 1_000
+
+        self.add_frame_transform(
+            translation_rotation=nuscenes_camera_data, timestamp_micro_s=timestamp_micro_s, topic_name=camera_topic_name
+        )
+
     def add_nuscenes_ego_pose(
         self, nuscenes_egopose_data: dict[str, Union[str, int, list[float]]], flag_add_point_cloud: bool = False
     ):
         timestamp_ns = nuscenes_egopose_data["timestamp"] * 1_000
-
-        frame_transform_msg = FrameTransform(
-            timestamp=get_protobuf_timestamp(timestamp_ns=timestamp_ns),
-            child_frame_id="ego_pose",
-            parent_frame_id=self.WORLD_FRAME_ID,
-            translation=Vector3(
-                x=nuscenes_egopose_data["translation"][0],
-                y=nuscenes_egopose_data["translation"][1],
-                z=nuscenes_egopose_data["translation"][2],
-            ),
-            rotation=Quaternion(
-                x=nuscenes_egopose_data["rotation"][0],
-                y=nuscenes_egopose_data["rotation"][1],
-                z=nuscenes_egopose_data["rotation"][2],
-                w=nuscenes_egopose_data["rotation"][3],
-            ),
-        )
-
-        self.writer.write_message(
-            topic="/frame_transform",
-            message=frame_transform_msg,
-            log_time=timestamp_ns,
+        self.add_frame_transform(
+            translation_rotation=nuscenes_egopose_data,
+            timestamp_micro_s=nuscenes_egopose_data["timestamp"],
+            topic_name="/ego_vehicle",
         )
 
         if flag_add_point_cloud:
@@ -101,7 +123,7 @@ class McapWriter:
         )
 
         msg = PointCloud(
-            frame_id=self.WORLD_FRAME_ID,
+            frame_id=WORLD_FRAME_ID,
             pose=self.centerpose,
             data=self.ego_pose_data.getvalue(),
             fields=self.point_cloud_fields,

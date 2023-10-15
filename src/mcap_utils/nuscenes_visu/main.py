@@ -1,5 +1,4 @@
 from __future__ import annotations
-from io import BytesIO
 
 import sys
 
@@ -32,12 +31,21 @@ def load_nuscenes(argv: list[str]):
             else:
                 sample = nusc.get("sample", sample["next"])
 
-            sample_data = nusc.get("sample_data", sample["data"][NuscenesCameras.CAM_FRONT])
+            for camera_name in NuscenesCameras:
+                sample_data = nusc.get("sample_data", sample["data"][camera_name])
 
-            # get ego pose
-            ego_pose = nusc.get("ego_pose", sample_data["ego_pose_token"])
+                # get ego pose
+                ego_pose = nusc.get("ego_pose", sample_data["ego_pose_token"])
 
-            mcap_writer.add_nuscenes_ego_pose(nuscenes_egopose_data=ego_pose, flag_add_point_cloud=True)
+                # get extrinsics and intrinsics of camera
+                camera_parameter = nusc.get("calibrated_sensor", sample_data["calibrated_sensor_token"])
+                mcap_writer.add_nuscenes_camera_pose(
+                    nuscenes_camera_data=camera_parameter,
+                    timestamp_micro_s=sample_data["timestamp"],
+                    camera_topic_name=sample_data["channel"],
+                )
+
+                mcap_writer.add_nuscenes_ego_pose(nuscenes_egopose_data=ego_pose, flag_add_point_cloud=True)
 
     print()
 
