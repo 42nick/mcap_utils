@@ -156,6 +156,34 @@ class McapWriter:
             log_time=timestamp_ns,
         )
 
+    def add_ego_pose_point_cloud(self, timestamp_ns: int, points: np.ndarray):
+        data = BytesIO()
+        for point in points:
+            data.write(
+                struct.pack(
+                    "<ffff",
+                    point[0],
+                    point[1],
+                    point[2],
+                    0.5,
+                )
+            )
+
+        msg = PointCloud(
+            frame_id=self.word_frame_id,
+            pose=self.centerpose,
+            data=data.getvalue(),
+            fields=self.point_cloud_fields,
+            timestamp=get_protobuf_timestamp(timestamp_ns),
+            point_stride=16,
+        )
+
+        self.writer.write_message(
+            topic="/ego_vehicle_point_cloud",
+            message=msg,
+            log_time=timestamp_ns,
+        )
+
     def add_image(
         self,
         image: np.ndarray,

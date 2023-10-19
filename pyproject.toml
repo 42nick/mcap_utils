@@ -8,11 +8,12 @@ readme = "README.md"
 
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "<3.13,>=3.9"
 foxglove-schemas-protobuf = "^0.1.1"
 mcap-protobuf-support = "^0.4.0"
 nuscenes-devkit = "^1.1.11"
 simple-parsing = "^0.1.4"
+pandas = "^2.1.1"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4.2"
