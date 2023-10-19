@@ -12,4 +12,6 @@ With [PEP 631](https://peps.python.org/pep-0631/) it becomes easily to add optio
 # Additional installation steps
 ```bash
 sudo apt-get install python3-tk
+sudo apt-get install ffmpeg libsm6 libxext6
 ```
+
