@@ -39,11 +39,7 @@ def load_nuscenes(argv: list[str]):
             for camera_name in NuscenesCameras:
                 sample_data = nusc.get("sample_data", sample["data"][camera_name])
 
-                # get ego pose
-                ego_pose = nusc.get("ego_pose", sample_data["ego_pose_token"])
-
-                # get extrinsics and intrinsics of camera
-
+                # add nuscenes camera information
                 mcap_writer.add_nuscenes_camera_pose(
                     sample_data=sample_data,
                     camera_topic_name=sample_data["channel"],
@@ -52,7 +48,13 @@ def load_nuscenes(argv: list[str]):
                 # add image to mcap
                 mcap_writer.add_nuscenes_image(sample_data=sample_data)
 
+                # get ego pose
+                ego_pose = nusc.get("ego_pose", sample_data["ego_pose_token"])
                 mcap_writer.add_nuscenes_ego_pose(nuscenes_egopose_data=ego_pose, flag_add_point_cloud=True)
+
+            # add 3d box annotations to mcap
+            mcap_writer.add_nuscenes_3d_box_annotations(sample=sample)
+
             frame_cnt += 1
 
     print()

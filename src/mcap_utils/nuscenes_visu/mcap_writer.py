@@ -5,23 +5,21 @@ from typing import Union
 
 import numpy as np
 from foxglove_schemas_protobuf.CameraCalibration_pb2 import CameraCalibration
-from foxglove_schemas_protobuf.CircleAnnotation_pb2 import CircleAnnotation
-from foxglove_schemas_protobuf.Color_pb2 import Color
 from foxglove_schemas_protobuf.CompressedImage_pb2 import CompressedImage
+from foxglove_schemas_protobuf.CubePrimitive_pb2 import CubePrimitive
 from foxglove_schemas_protobuf.FrameTransform_pb2 import FrameTransform
-from foxglove_schemas_protobuf.ImageAnnotations_pb2 import ImageAnnotations
 from foxglove_schemas_protobuf.PackedElementField_pb2 import PackedElementField
-from foxglove_schemas_protobuf.Point2_pb2 import Point2
 from foxglove_schemas_protobuf.PointCloud_pb2 import PointCloud
 from foxglove_schemas_protobuf.Pose_pb2 import Pose
 from foxglove_schemas_protobuf.Quaternion_pb2 import Quaternion
 from foxglove_schemas_protobuf.RawImage_pb2 import RawImage
+from foxglove_schemas_protobuf.SceneEntityDeletion_pb2 import SceneEntityDeletion
+from foxglove_schemas_protobuf.SceneUpdate_pb2 import SceneUpdate
 from foxglove_schemas_protobuf.Vector3_pb2 import Vector3
 from google.protobuf.timestamp_pb2 import Timestamp
 from mcap_protobuf.writer import Writer
 from nuscenes.nuscenes import NuScenes
 
-from mcap_utils.utils.io_utils import load_image_opencv
 
 
 def get_protobuf_timestamp(timestamp_ns: int) -> Timestamp:
@@ -88,7 +86,8 @@ class McapWriterNuscenes:
 
         timestamp_ns = timestamp_micro_s * 1_000
         self.writer.write_message(
-            topic=topic_name,
+            # topic=topic_name,
+            topic="/tf",
             message=FrameTransform(
                 timestamp=get_protobuf_timestamp(timestamp_ns=timestamp_ns),
                 child_frame_id=child_frame_id,
@@ -141,7 +140,7 @@ class McapWriterNuscenes:
         )
 
         self.writer.write_message(
-            topic=f"/camera/{camera_topic_name}/calibration",
+            topic=f"/camera/{camera_topic_name}/camera_info",
             message=calib_msg,
             log_time=sample_data["timestamp"] * 1_000,
         )
@@ -177,6 +176,41 @@ class McapWriterNuscenes:
 
         self.writer.write_message(
             topic=f"/camera/{sample_data['channel']}/image", message=img_msg, log_time=sample_data["timestamp"] * 1000
+        )
+
+    def add_nuscenes_3d_box_annotations(self, sample: dict[str, Union[str, int]]):
+        scene_update = SceneUpdate()
+        for annotation_id in sample["anns"]:
+            annotation = self.nusc.get("sample_annotation", annotation_id)
+
+            # get color of the category
+            anno_color = np.array(self.nusc.explorer.get_color(annotation["category_name"])) / 255.0
+            entity = scene_update.entities.add()
+            entity.frame_locked = True
+
+            entity.id = annotation["token"]
+            entity.frame_id = self.word_frame_id
+            cube: CubePrimitive = entity.cubes.add()
+            cube.pose.position.x = annotation["translation"][0]
+            cube.pose.position.y = annotation["translation"][1]
+            cube.pose.position.z = annotation["translation"][2]
+            cube.pose.orientation.x = annotation["rotation"][1]
+            cube.pose.orientation.y = annotation["rotation"][2]
+            cube.pose.orientation.z = annotation["rotation"][3]
+            cube.pose.orientation.w = annotation["rotation"][0]
+            cube.size.x = annotation["size"][1]
+            cube.size.y = annotation["size"][0]
+            cube.size.z = annotation["size"][2]
+            cube.color.r = anno_color[0]
+            cube.color.g = anno_color[1]
+            cube.color.b = anno_color[2]
+            cube.color.a = 0.5
+
+        # scene_update.deletions.add(SceneEntityDeletion(type=1))
+        deletions = scene_update.deletions.add()
+        deletions.type = 1
+        self.writer.write_message(
+            topic="/annotations/3d-boxs", message=scene_update, log_time=sample["timestamp"] * 1000
         )
 
     def add_ego_pose_point_track(self, timestamp_ns: int, points: np.ndarray):
