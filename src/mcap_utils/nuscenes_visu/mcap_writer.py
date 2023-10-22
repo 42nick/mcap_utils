@@ -28,6 +28,10 @@ def get_protobuf_timestamp(timestamp_ns: int) -> Timestamp:
     return Timestamp(seconds=timestamp_ns // 1_000_000_000, nanos=timestamp_ns % 1_000_000_000)
 
 
+def get_protobuf_timestamp_from_mircos(timestamp_micros: int) -> Timestamp:
+    return Timestamp(seconds=timestamp_micros // 1_000_000, nanos=timestamp_micros % 1_000_000)
+
+
 WORLD_FRAME_ID = "/world"
 EGO_VEHICLE_FRAME_ID = "/ego_vehicle"
 
@@ -106,19 +110,40 @@ class McapWriterNuscenes:
 
     def add_nuscenes_camera_pose(
         self,
-        nuscenes_camera_data: dict[str, Union[str, list[float]]],
-        timestamp_micro_s: int,
+        sample_data: dict[str, Union[str, list[float]]],
         camera_topic_name: str,
         parent_frame_id: str = None,
     ):
+        camera_parameter = self.nusc.get("calibrated_sensor", sample_data["calibrated_sensor_token"])
         if parent_frame_id is None:
             parent_frame_id = self.ego_vehicle_frame_id
         self.add_frame_transform(
-            translation_rotation=nuscenes_camera_data,
-            timestamp_micro_s=timestamp_micro_s,
+            translation_rotation=camera_parameter,
+            timestamp_micro_s=sample_data["timestamp"],
             topic_name=camera_topic_name,
             child_frame_id=camera_topic_name,
             parent_frame_id=parent_frame_id,
+        )
+
+        projection_matrix = np.eye(3, 4)
+        projection_matrix[:3, :3] = camera_parameter["camera_intrinsic"]
+
+        calib_msg = CameraCalibration(
+            timestamp=get_protobuf_timestamp_from_mircos(sample_data["timestamp"]),
+            frame_id=camera_topic_name,
+            height=sample_data["height"],
+            width=sample_data["width"],
+            K=camera_parameter["camera_intrinsic"][0]
+            + camera_parameter["camera_intrinsic"][1]
+            + camera_parameter["camera_intrinsic"][2],
+            R=[1, 0, 0, 0, 1, 0, 0, 0, 1],
+            P=projection_matrix.flatten().tolist(),
+        )
+
+        self.writer.write_message(
+            topic=f"/camera/{camera_topic_name}/calibration",
+            message=calib_msg,
+            log_time=sample_data["timestamp"] * 1_000,
         )
 
     def add_nuscenes_ego_pose(
