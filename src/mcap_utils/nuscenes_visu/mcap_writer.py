@@ -7,6 +7,7 @@ import numpy as np
 from foxglove_schemas_protobuf.CameraCalibration_pb2 import CameraCalibration
 from foxglove_schemas_protobuf.CircleAnnotation_pb2 import CircleAnnotation
 from foxglove_schemas_protobuf.Color_pb2 import Color
+from foxglove_schemas_protobuf.CompressedImage_pb2 import CompressedImage
 from foxglove_schemas_protobuf.FrameTransform_pb2 import FrameTransform
 from foxglove_schemas_protobuf.ImageAnnotations_pb2 import ImageAnnotations
 from foxglove_schemas_protobuf.PackedElementField_pb2 import PackedElementField
@@ -18,6 +19,9 @@ from foxglove_schemas_protobuf.RawImage_pb2 import RawImage
 from foxglove_schemas_protobuf.Vector3_pb2 import Vector3
 from google.protobuf.timestamp_pb2 import Timestamp
 from mcap_protobuf.writer import Writer
+from nuscenes.nuscenes import NuScenes
+
+from mcap_utils.utils.io_utils import load_image_opencv
 
 
 def get_protobuf_timestamp(timestamp_ns: int) -> Timestamp:
@@ -28,11 +32,16 @@ WORLD_FRAME_ID = "/world"
 EGO_VEHICLE_FRAME_ID = "/ego_vehicle"
 
 
-class McapWriter:
+class McapWriterNuscenes:
     def __init__(
-        self, writer: Writer, world_frame_id: str = WORLD_FRAME_ID, ego_vehicle_frame_id: str = EGO_VEHICLE_FRAME_ID
+        self,
+        writer: Writer,
+        nusc: NuScenes,
+        world_frame_id: str = WORLD_FRAME_ID,
+        ego_vehicle_frame_id: str = EGO_VEHICLE_FRAME_ID,
     ) -> None:
         self.writer = writer
+        self.nusc = nusc
 
         self.word_frame_id = world_frame_id
         self.ego_vehicle_frame_id = ego_vehicle_frame_id
@@ -129,6 +138,21 @@ class McapWriter:
                 timestamp_ns=timestamp_ns,
                 points=nuscenes_egopose_data["translation"],
             )
+
+    def add_nuscenes_image(self, sample_data: dict[str, Union[str, int]]):
+        # img = load_image_opencv(img_path=)
+        img_msg = CompressedImage(
+            timestamp=get_protobuf_timestamp(sample_data["timestamp"] * 1000),
+            format=sample_data["filename"].split(".")[-1],
+            frame_id=sample_data["channel"],
+        )
+
+        with open(self.nusc.get_sample_data_path(sample_data["token"]), "rb") as nuscenes_image:
+            img_msg.data = nuscenes_image.read()
+
+        self.writer.write_message(
+            topic=f"/camera/{sample_data['channel']}/image", message=img_msg, log_time=sample_data["timestamp"] * 1000
+        )
 
     def add_ego_pose_point_track(self, timestamp_ns: int, points: np.ndarray):
         self.ego_pose_data.write(

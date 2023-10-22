@@ -7,7 +7,7 @@ from mcap_protobuf.writer import Writer
 from nuscenes.nuscenes import NuScenes
 
 from mcap_utils.nuscenes_visu.definitions import CLIParameter, NuscenesCameras
-from mcap_utils.nuscenes_visu.mcap_writer import McapWriter
+from mcap_utils.nuscenes_visu.mcap_writer import McapWriterNuscenes
 
 matplotlib.use("TkAgg")
 
@@ -18,12 +18,17 @@ def load_nuscenes(argv: list[str]):
     nusc = NuScenes(version=args.nuscenes_version, dataroot=args.nuscenes_data_root, verbose=True)
 
     with open("z.mcap", "wb") as f, Writer(f) as writer:
-        mcap_writer = McapWriter(writer=writer)
+        mcap_writer = McapWriterNuscenes(writer=writer, nusc=nusc)
 
         my_scene = nusc.scene[0]
         sample = None
 
+        frame_cnt = 0
+
         while True:
+            # if frame_cnt > 10:
+            #     break
+
             if sample is None:
                 sample = nusc.get("sample", my_scene["first_sample_token"])
             elif sample["next"] == "":
@@ -45,7 +50,13 @@ def load_nuscenes(argv: list[str]):
                     camera_topic_name=sample_data["channel"],
                 )
 
+                # add image to mcap
+                # image = load_image_opencv(img_path=nusc.get_sample_data_path(sample_data["token"]))
+
+                mcap_writer.add_nuscenes_image(sample_data=sample_data)
+
                 mcap_writer.add_nuscenes_ego_pose(nuscenes_egopose_data=ego_pose, flag_add_point_cloud=True)
+            frame_cnt += 1
 
     print()
 
